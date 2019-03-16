@@ -41,5 +41,5 @@ def flip_img():
 if __name__ == '__main__':
     #detect_edges()
     #rename_img()
-    flip_img()
+    #flip_img()
     pass
