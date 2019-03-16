@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import shutil
 
 # https://stackoverflow.com/questions/17815687/image-processing-implementing-sobel-filter
 def detect_edges():
@@ -17,12 +18,13 @@ def detect_edges():
 
 def rename_img():
     # change directory to data
-    os.chdir('data')
+    os.chdir('data_uncleaned')
     # rename all the images to indices
     i = 1
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             os.rename(image, str(i) + ".jpg")
+            # shutil.copyfile(str(i) + ".jpg", "../data/"+ str(i) + ".jpg")
             i += 1
 
 def flip_img():
@@ -38,8 +40,63 @@ def flip_img():
             cv2.imwrite(str(i) + ".jpg", horizontal_img)
             i += 1
 
+def resize_img(height_pixel):
+    # os.chdir('../data')
+    i = 1
+    for image in os.listdir(os.getcwd()):
+        if image.endswith(".jpg"):
+            img = cv2.imread(image)
+            scale_percent = height_pixel / img.shape[0] # percent of original size
+            width = int(img.shape[1] * scale_percent)
+            height = height_pixel
+            dim = (width, height)
+            resized = cv2.resize(img, dsize=dim, interpolation=cv2.INTER_CUBIC)
+            cv2.imwrite(str(i) + ".jpg", resized)
+            i += 1
+        # else:
+        #     print("{}".format(i))
+
+def crop_img():
+    # os.chdir('data')
+    i = 1
+    cropped_id = 0
+    for image in os.listdir(os.getcwd()):
+        if image.endswith(".jpg"):
+            img = cv2.imread(image)
+            height = img.shape[0]
+            width = img.shape[1]
+            cropped_img = np.empty
+            if width < height * 0.8:
+                print("Image Removed: {}, {}*{}".format(i, width, height))
+                os.remove(str(i)+".jpg")
+            elif width < height:
+                crop_start = int(height / 2 - width / 2)
+                crop_end = int(crop_start + width)
+                cropped_img = img[crop_start:crop_end, 0:width]
+                cv2.imwrite(str(cropped_id) + ".jpg", cropped_img)
+                cropped_id += 1
+            elif width < height * 1.9:
+                crop_start = int(width / 2 - height / 2)
+                crop_end = int(crop_start + height)
+                cropped_img = img[0:height, crop_start:crop_end]
+                cv2.imwrite("../data/" + str(cropped_id) + ".jpg", cropped_img)
+                cropped_id += 1
+            else:
+                crop_start = 0
+                crop_end = height
+                right_limit = img.shape[1]
+                while True:
+                    cropped_img = img[0:height, crop_start:crop_end]
+                    cv2.imwrite("../data/" + str(cropped_id) + ".jpg", cropped_img)
+                    cropped_id += 1
+                    crop_start += int(height * 0.8)
+                    crop_end += int(height * 0.8)
+                    if crop_end >= right_limit:
+                        break
+        
+
 if __name__ == '__main__':
-    #detect_edges()
-    #rename_img()
-    #flip_img()
+    rename_img()
+    resize_img(240)
+    crop_img()
     pass
