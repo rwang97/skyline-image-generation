@@ -38,6 +38,8 @@ def resize_img(new_dimension):
                 width = int(img.shape[1] * scale_percent)
                 height = new_dimension
                 dim = (width, height)
+            elif img.shape[1] == img.shape[0]:
+                dim = (new_dimension, new_dimension)
             else:
                 scale_percent = new_dimension / img.shape[1]
                 height = int(img.shape[0] * scale_percent)
@@ -45,6 +47,13 @@ def resize_img(new_dimension):
                 dim = (width, height)
             resized = cv2.resize(img, dsize=dim, interpolation=cv2.INTER_CUBIC)
             cv2.imwrite(image, resized)
+
+def crop_size_check(img):
+    if img.shape[0] == 224 and img.shape[1] == 224:
+        return True
+    else:
+        return False
+
 
 def crop_img():
     cropped_id = 0
@@ -65,12 +74,18 @@ def crop_img():
                 crop_start = int(height / 2 - width / 2)
                 crop_end = int(crop_start + width)
                 cropped_img = img[crop_start:crop_end, 0:width]
+                if not crop_size_check(cropped_img):
+                    print("{}, {}: {}*{}".format(image, cropped_id, height, width))
+                    cv2.resize(cropped_img, dsize=(224,224), interpolation=cv2.INTER_CUBIC)
                 cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                 cropped_id += 1
             elif width < height * 1.9:
                 crop_start = int(width / 2 - height / 2)
                 crop_end = int(crop_start + height)
                 cropped_img = img[0:height, crop_start:crop_end]
+                if not crop_size_check(cropped_img):
+                    print("{}, {}: {}*{}".format(image, cropped_id, height, width))
+                    cv2.resize(cropped_img, dsize=(224,224), interpolation=cv2.INTER_CUBIC)
                 cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                 cropped_id += 1
             else:
@@ -79,6 +94,9 @@ def crop_img():
                 right_limit = img.shape[1]
                 while True:
                     cropped_img = img[0:height, crop_start:crop_end]
+                    if not crop_size_check(cropped_img):
+                        print("{}, {}: {}*{}".format(image, cropped_id, height, width))
+                        cv2.resize(cropped_img, dsize=(224,224), interpolation=cv2.INTER_CUBIC)
                     cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                     cropped_id += 1
                     crop_start += int(height * 0.8)
