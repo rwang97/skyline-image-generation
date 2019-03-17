@@ -9,58 +9,175 @@ import matplotlib.pyplot as plt
 from torchvision import datasets, models, transforms
 from torch.nn import functional as F
 from model import DCGAN
+import cv2 as cv
+
+manualSeed = 999
 
 ###############################################################################
 # Data Loading
 def get_data_loader(batch_size):
     # The output of torchvision datasets are PILImage images of range [0, 1].
     # We transform them to Tensors of normalized range [-1, 1].
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform_real = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform_edge = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    # load each dataset with corresponding folders
+    realset = torchvision.datasets.ImageFolder(root='./data', transform=transform_real)
+    real_loader = torch.utils.data.DataLoader(realset, batch_size=batch_size,
+                                               num_workers=1)
 
     # load each dataset with corresponding folders
-    trainset = torchvision.datasets.ImageFolder(root='./data', transform=transform)
+    edgeset = torchvision.datasets.ImageFolder(root='./edges', transform=transform_edge)
+    edge_loader = torch.utils.data.DataLoader(edgeset, batch_size=batch_size,
+                                               num_workers=1)
 
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                               shuffle=True, num_workers=1)
+    ############# plotting images ############
+    # edge_iter = iter(edge_loader)
+    # k = 0
+    # for image, labels in real_loader:
+    #     sample_batch = next(edge_iter)
+    #     image_1 = image[0]
+    #     image_2 = sample_batch[0][0]
+    #     img_1 = np.transpose(image_1, [1, 2, 0])
+    #     img_2 = np.transpose(image_2, [1, 2, 0])
+    #     img_1 = img_1 / 2 + 0.5
+    #     img_2 = img_2 / 2 + 0.5
+    #
+    #     plt.subplot(4, 2, k + 1)
+    #     plt.imshow(img_1)
+    #     plt.subplot(4, 2, k + 2)
+    #     plt.imshow(img_2)
+    #     k += 2
+    #     if k > 12:
+    #         input("Press Enter to continue...")
+    #         break
 
-    return train_loader
+    return real_loader, edge_loader
 
 
-def train(model, batch_size=64, learning_rate=1e-4):
+###############################################################################
+# Weight initialization
+# custom weights initialization called on netG and netD
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
+# https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
+def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
     # load training data
-    train_loader = get_data_loader(batch_size)
+    real_loader, edge_loader = get_data_loader(batch_size)
 
     # loss function and optimizer
-    criterion = nn.MSELoss()
-    optimizer_d = optim.Adam(model.discriminator.parameters(), lr=learning_rate)
-    optimizer_g = optim.Adam(model.generator.parameters(), lr=learning_rate)
+    criterion = nn.BCELoss()
+    optimizerD = optim.Adam(model.netD.parameters(), lr=learning_rate)
+    optimizerG = optim.Adam(model.netG.parameters(), lr=learning_rate)
 
-    # measure time
-    start_time = time.time()
+    real_label = 1
+    fake_label = 0
 
-    total_train_loss = 0.0
-    # train d
-    while(get_accuracy())
+    # Lists to keep track of progress
+    img_list = []
+    G_losses = []
+    D_losses = []
+    iters = 0
 
-    for i, data in enumerate(train_loader, 0):
-        # Get the inputs
-        inputs, labels = data
+    print("Starting Training Loop...")
+    # For each epoch
+    for epoch in range(num_epochs):
+        edge_iter = iter(edge_loader)
+        # For each batch in the dataloader
+        transform_edge = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(),
+                                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        # Forward pass, backward pass, and optimize
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        # Zero the parameter gradients
-        optimizer.zero_grad()
+        test_edge = torchvision.datasets.ImageFolder(root='./test', transform=transform_edge)
+        test_loader = torch.utils.data.DataLoader(test_edge, batch_size=1,num_workers=1)
+        test_fake = model.netG(next(iter(test_loader))[0])
+        test_fake = np.transpose(test_fake.detach().numpy().squeeze(), [1, 2, 0]) * 255
+        print(test_fake.shape)
+        print(test_fake)
+        cv.imwrite("./data/Fake/" + str(epoch) + ".jpg", test_fake)
 
-        # Calculate the statistics
-        total_train_loss += loss.item()
+        for i, real_data in enumerate(real_loader, 0):
+
+            ############################
+            model.netD.zero_grad()
+            # Format batch
+            label = torch.full((batch_size,), real_label)
+            # Forward pass real batch through D
+            output = model.netD(real_data[0]).view(-1)
+            # Calculate loss on all-real batch
+            errD_real = criterion(output, label)
+            # Calculate gradients for D in backward pass
+            errD_real.backward()
+            D_x = output.mean().item()
+
+            print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", real_d loss is: " + str(float(errD_real)))
+
+            # Train with all-fake batch
+            # Generate fake image batch with G
+            fake_batch = next(edge_iter)
+            fake = model.netG(fake_batch[0])
+            label.fill_(fake_label)
+            # Classify all fake batch with D
+            output = model.netD(fake.detach()).view(-1)
+            # Calculate D's loss on the all-fake batch
+            errD_fake = criterion(output, label)
+            # Calculate the gradients for this batch
+            errD_fake.backward()
+            D_G_z1 = output.mean().item()
+            # Add the gradients from the all-real and all-fake batches
+            errD = errD_real + errD_fake
+            # Update D
+            optimizerD.step()
+            print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", d_loss is: " + str(float(errD)))
+
+            ############################
+            # (2) Update G network: maximize log(D(G(z)))
+            ###########################
+            model.netG.zero_grad()
+            label.fill_(real_label)  # fake labels are real for generator cost
+            # Since we just updated D, perform another forward pass of all-fake batch through D
+            output = model.netD(fake).view(-1)
+            # Calculate G's loss based on this output
+            errG = criterion(output, label)
+            # Calculate gradients for G
+            errG.backward()
+            D_G_z2 = output.mean().item()
+            # Update G
+            optimizerG.step()
+
+            # Output training stats
+            print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", d_loss is: " + str(float(errD)) + ", g_loss is: " + str(float(errG)))
+            print("=============================================================")
+        # save the fake photo
+
+            # Save Losses for plotting later
+            # G_losses.append(errG.item())
+            # D_losses.append(errD.item())
+
+            # Check how the generator is doing by saving G's output on fixed_noise
+            # if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+            #     with torch.no_grad():
+            #         fake = netG(fixed_noise).detach().cpu()
+            #     img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
+
 
 ###############################################################################
 # Main Function
 if __name__ == '__main__':
     filter_size = 64
     gan = DCGAN(filter_size)
-    train(gan)
+    gan.netG.apply(weights_init)
+    gan.netD.apply(weights_init)
+    num_epoch = 2
+    batch_size = 32
+    learning_rate = 1e-4
+    train(gan, batch_size, learning_rate, num_epoch)
+    #
+    # print images
+    #real_loader, edge_loader = get_data_loader(1)
     #train_model(gan)

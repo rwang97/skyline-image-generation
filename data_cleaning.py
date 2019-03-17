@@ -29,7 +29,7 @@ def rename_img():
 
 def flip_img():
     # change directory to data
-    os.chdir('data')
+    os.chdir('data/Real')
     # find the last data index in current directory
     i = len(os.listdir(os.getcwd())) + 1
     # flipping original data
@@ -42,6 +42,7 @@ def flip_img():
 
 def resize_img(height_pixel):
     # os.chdir('../data')
+    os.chdir('data_uncleaned')
     i = 1
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
@@ -51,14 +52,13 @@ def resize_img(height_pixel):
             height = height_pixel
             dim = (width, height)
             resized = cv2.resize(img, dsize=dim, interpolation=cv2.INTER_CUBIC)
-            cv2.imwrite(str(i) + ".jpg", resized)
+            cv2.imwrite(image, resized)
             i += 1
         # else:
         #     print("{}".format(i))
 
 def crop_img():
     # os.chdir('data')
-    i = 1
     cropped_id = 0
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
@@ -67,19 +67,19 @@ def crop_img():
             width = img.shape[1]
             cropped_img = np.empty
             if width < height * 0.8:
-                print("Image Removed: {}, {}*{}".format(i, width, height))
-                os.remove(str(i)+".jpg")
+                print("Image Removed: ", image)
+                os.remove(image)
             elif width < height:
                 crop_start = int(height / 2 - width / 2)
                 crop_end = int(crop_start + width)
                 cropped_img = img[crop_start:crop_end, 0:width]
-                cv2.imwrite(str(cropped_id) + ".jpg", cropped_img)
+                cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                 cropped_id += 1
             elif width < height * 1.9:
                 crop_start = int(width / 2 - height / 2)
                 crop_end = int(crop_start + height)
                 cropped_img = img[0:height, crop_start:crop_end]
-                cv2.imwrite("../data/" + str(cropped_id) + ".jpg", cropped_img)
+                cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                 cropped_id += 1
             else:
                 crop_start = 0
@@ -87,7 +87,7 @@ def crop_img():
                 right_limit = img.shape[1]
                 while True:
                     cropped_img = img[0:height, crop_start:crop_end]
-                    cv2.imwrite("../data/" + str(cropped_id) + ".jpg", cropped_img)
+                    cv2.imwrite("../data/Real/" + str(cropped_id) + ".jpg", cropped_img)
                     cropped_id += 1
                     crop_start += int(height * 0.8)
                     crop_end += int(height * 0.8)
@@ -96,7 +96,8 @@ def crop_img():
         
 
 if __name__ == '__main__':
-    rename_img()
-    resize_img(240)
-    crop_img()
+    # rename_img()
+    # resize_img(224)
+    # crop_img()
+    flip_img()
     pass
