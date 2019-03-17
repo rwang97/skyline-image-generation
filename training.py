@@ -10,6 +10,7 @@ from torchvision import datasets, models, transforms
 from torch.nn import functional as F
 from model import DCGAN
 import cv2 as cv
+import shutil
 
 manualSeed = 999
 
@@ -19,7 +20,7 @@ def get_data_loader(batch_size):
     # The output of torchvision datasets are PILImage images of range [0, 1].
     # We transform them to Tensors of normalized range [-1, 1].
     transform_real = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    transform_edge = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform_edge = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     # load each dataset with corresponding folders
     realset = torchvision.datasets.ImageFolder(root='./data', transform=transform_real)
     real_loader = torch.utils.data.DataLoader(realset, batch_size=batch_size,
@@ -68,6 +69,11 @@ def weights_init(m):
 
 # https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
 def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
+    # clean the fake directory
+    if os.path.exists('./data/Fake'):
+        shutil.rmtree('./data/Fake')
+    os.makedirs('./data/Fake')
+    
     # load training data
     real_loader, edge_loader = get_data_loader(batch_size)
 
@@ -91,7 +97,7 @@ def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
         edge_iter = iter(edge_loader)
         # For each batch in the dataloader
         transform_edge = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(),
-                                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                             transforms.Normalize((0.5,), (0.5,))])
 
         test_edge = torchvision.datasets.ImageFolder(root='./test', transform=transform_edge)
         test_loader = torch.utils.data.DataLoader(test_edge, batch_size=1,num_workers=1)
