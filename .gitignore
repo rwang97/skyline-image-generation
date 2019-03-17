@@ -1,2 +1,5 @@
 # remove .DS_Store
 .DS_Store
+data/*
+data_uncleaned/*
+generator_input/*

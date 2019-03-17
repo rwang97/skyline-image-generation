@@ -3,33 +3,20 @@ import numpy as np
 import os
 import shutil
 
-# https://stackoverflow.com/questions/17815687/image-processing-implementing-sobel-filter
-def detect_edges():
-    os.chdir('data')
-    imageSource = 'pic_name.jpg'
-    img = cv2.imread(imageSource)
-    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY).astype(float)
-
-    edge_x = cv2.Sobel(img,cv2.CV_64F,1,0,ksize=3)
-    edge_y = cv2.Sobel(img,cv2.CV_64F,0,1,ksize=3)
-    edge = np.sqrt(edge_x**2 + edge_y**2)
-
-    cv2.imwrite("out_name.jpg", edge)
-
 def rename_img():
     # change directory to data
+    assert os.path.exists('data_uncleaned'), "Raw data not found"
     os.chdir('data_uncleaned')
     # rename all the images to indices
     i = 1
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             os.rename(image, str(i) + ".jpg")
-            # shutil.copyfile(str(i) + ".jpg", "../data/"+ str(i) + ".jpg")
             i += 1
 
 def flip_img():
     # change directory to data
-    os.chdir('data/Real')
+    os.chdir('../data/Real')
     # find the last data index in current directory
     i = len(os.listdir(os.getcwd())) + 1
     # flipping original data
@@ -40,26 +27,31 @@ def flip_img():
             cv2.imwrite(str(i) + ".jpg", horizontal_img)
             i += 1
 
-def resize_img(height_pixel):
-    # os.chdir('../data')
-    os.chdir('data_uncleaned')
-    i = 1
+def resize_img(new_dimension):
+    # os.chdir('data_uncleaned')
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             img = cv2.imread(image)
-            scale_percent = height_pixel / img.shape[0] # percent of original size
-            width = int(img.shape[1] * scale_percent)
-            height = height_pixel
-            dim = (width, height)
+            dim = 0, 0
+            if img.shape[1] > img.shape[0]:  # A wide image
+                scale_percent = new_dimension / img.shape[0]  # percent of original size
+                width = int(img.shape[1] * scale_percent)
+                height = new_dimension
+                dim = (width, height)
+            else:
+                scale_percent = new_dimension / img.shape[1]
+                height = int(img.shape[0] * scale_percent)
+                width = new_dimension
+                dim = (width, height)
             resized = cv2.resize(img, dsize=dim, interpolation=cv2.INTER_CUBIC)
             cv2.imwrite(image, resized)
-            i += 1
-        # else:
-        #     print("{}".format(i))
 
 def crop_img():
-    # os.chdir('data')
     cropped_id = 0
+    if os.path.exists('../data/Real'):
+        shutil.rmtree('../data/Real')
+    os.makedirs('../data/Real')
+
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             img = cv2.imread(image)
@@ -93,11 +85,10 @@ def crop_img():
                     crop_end += int(height * 0.8)
                     if crop_end >= right_limit:
                         break
-        
+
 
 if __name__ == '__main__':
-    # rename_img()
-    # resize_img(224)
-    # crop_img()
+    rename_img()
+    resize_img(224)
+    crop_img()
     flip_img()
-    pass

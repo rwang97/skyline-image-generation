@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import os
+import shutil
 
 def zero_out(img):
 
@@ -20,6 +21,7 @@ def zero_out(img):
     # cv.imwrite("thresh5.jpg", thresh5)
     return thresh
 
+# https://stackoverflow.com/questions/17815687/image-processing-implementing-sobel-filter
 def detect_edges(img):
     #img = cv2.imread(imageSource)
     #img = cv2.cvtColor(imageSource,cv2.COLOR_BGR2GRAY).astype(float)
@@ -39,16 +41,23 @@ def rgb_to_gray(imageSource):
 
 def mor_closing():
     # change directory to data
+    assert os.path.exists('data/Real'), "Cropped images not found"
     os.chdir('data/Real')
+
+    generator_input_dir = '../../generator_input/edges'
+    if os.path.exists(generator_input_dir):
+        shutil.rmtree(generator_input_dir)
+    os.makedirs(generator_input_dir)
+
     # flipping original data
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             img = rgb_to_gray(image)
-            kernel = np.ones((10, 10), np.uint8)
+            kernel = np.ones((7, 7), np.uint8)
             closing = cv.morphologyEx(img, cv.MORPH_CLOSE, kernel)
             img = detect_edges(closing)
             img = zero_out(img)
-            cv.imwrite("../../edges/"+image, img)
+            cv.imwrite(generator_input_dir + "/" + image, img)
 
 
 if __name__ == '__main__':
