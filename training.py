@@ -26,7 +26,7 @@ def get_data_loader(batch_size):
                                                num_workers=1)
 
     # load each dataset with corresponding folders
-    edgeset = torchvision.datasets.ImageFolder(root='./edges', transform=transform_edge)
+    edgeset = torchvision.datasets.ImageFolder(root='./generator_input', transform=transform_edge)
     edge_loader = torch.utils.data.DataLoader(edgeset, batch_size=batch_size,
                                                num_workers=1)
 
@@ -97,8 +97,8 @@ def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
         test_loader = torch.utils.data.DataLoader(test_edge, batch_size=1,num_workers=1)
         test_fake = model.netG(next(iter(test_loader))[0])
         test_fake = np.transpose(test_fake.detach().numpy().squeeze(), [1, 2, 0]) * 255
-        print(test_fake.shape)
-        print(test_fake)
+        # print(test_fake.shape)
+        # print(test_fake)
         cv.imwrite("./data/Fake/" + str(epoch) + ".jpg", test_fake)
 
         for i, real_data in enumerate(real_loader, 0):
@@ -114,8 +114,6 @@ def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = output.mean().item()
-
-            print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", real_d loss is: " + str(float(errD_real)))
 
             # Train with all-fake batch
             # Generate fake image batch with G
@@ -133,7 +131,6 @@ def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
             errD = errD_real + errD_fake
             # Update D
             optimizerD.step()
-            print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", d_loss is: " + str(float(errD)))
 
             ############################
             # (2) Update G network: maximize log(D(G(z)))
@@ -153,17 +150,6 @@ def train(model, batch_size=32, learning_rate=1e-4, num_epochs=5):
             # Output training stats
             print("epoch: " + str(epoch) + ", iteration: " + str(i) + ", d_loss is: " + str(float(errD)) + ", g_loss is: " + str(float(errG)))
             print("=============================================================")
-        # save the fake photo
-
-            # Save Losses for plotting later
-            # G_losses.append(errG.item())
-            # D_losses.append(errD.item())
-
-            # Check how the generator is doing by saving G's output on fixed_noise
-            # if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
-            #     with torch.no_grad():
-            #         fake = netG(fixed_noise).detach().cpu()
-            #     img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
 
 
 ###############################################################################
@@ -173,7 +159,7 @@ if __name__ == '__main__':
     gan = DCGAN(filter_size)
     gan.netG.apply(weights_init)
     gan.netD.apply(weights_init)
-    num_epoch = 2
+    num_epoch = 5
     batch_size = 32
     learning_rate = 1e-4
     train(gan, batch_size, learning_rate, num_epoch)

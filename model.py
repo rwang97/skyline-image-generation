@@ -81,19 +81,19 @@ class Generator(nn.Module):
             nn.ReLU()
         )
         self.hidden5= nn.Sequential(
-            nn.ConvTranspose2d(self.filter_size * 8, self.filter_size * 4, stride = 2, kernel_size=3, padding=1),
+            nn.ConvTranspose2d(self.filter_size * 8, self.filter_size * 4, stride = 2, kernel_size=3, padding=1, output_padding=1),
             nn.ReLU()
         )
         self.hidden6 = nn.Sequential(
-            nn.ConvTranspose2d(self.filter_size * 4, self.filter_size * 2, stride = 2, kernel_size=3, padding=1),
+            nn.ConvTranspose2d(self.filter_size * 4, self.filter_size * 2, stride = 2, kernel_size=3, padding=1, output_padding=1),
             nn.ReLU()
         )
         self.hidden7 = nn.Sequential(
-            nn.ConvTranspose2d(self.filter_size * 2, self.filter_size * 1, stride=2, kernel_size=5, padding=2),
+            nn.ConvTranspose2d(self.filter_size * 2, self.filter_size * 1, stride=2, kernel_size=5, padding=2, output_padding=1),
             nn.ReLU()
         )
         self.hidden8 = nn.Sequential(
-            nn.ConvTranspose2d(self.filter_size * 1, 3, stride = 2, kernel_size=5, padding=2),
+            nn.ConvTranspose2d(self.filter_size * 1, 3, stride = 2, kernel_size=5, padding=2, output_padding=1),
             nn.ReLU()
         )
         # normalize the output from 0 to 1
