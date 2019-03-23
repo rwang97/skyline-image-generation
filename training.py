@@ -23,12 +23,12 @@ def get_data_loader(batch_size):
     
     # load each dataset with corresponding folders
     realset = torchvision.datasets.ImageFolder(root='./data', transform=transform)
-    real_loader = torch.utils.data.DataLoader(realset, batch_size=batch_size,
+    real_loader = torch.utils.data.DataLoader(realset, batch_size=batch_size, drop_last=True,
                                                num_workers=1)
 
     # load each dataset with corresponding folders
     edgeset = torchvision.datasets.ImageFolder(root='./generator_input', transform=transform)
-    edge_loader = torch.utils.data.DataLoader(edgeset, batch_size=batch_size,
+    edge_loader = torch.utils.data.DataLoader(edgeset, batch_size=batch_size, drop_last=True,
                                                num_workers=1)
 
     ############# plotting images ############
@@ -153,7 +153,7 @@ def train(model, batch_size=32, learning_rate=1e-4, L1_lambda=10, num_epochs=5):
             model.netG.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = model.netD(edge_batch[0], fake.detach())
+            output = model.netD(edge_batch[0], fake)
             # Calculate G's loss based on this output
             loss_G_BCE = BCE_Loss(output, label)
             loss_G_L1 = L1_Loss(fake, real_data[0]) * L1_lambda

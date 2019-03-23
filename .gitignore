@@ -5,3 +5,4 @@ data_uncleaned/*
 generator_input/*
 __pycache__/*
 checkpoints/*
+test/*

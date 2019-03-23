@@ -3,10 +3,26 @@ import numpy as np
 import os
 import shutil
 
+# https://www.pythoncentral.io/how-to-recursively-copy-a-directory-folder-in-python/
+def copyDirectory(src, dest):
+    try:
+        if os.path.exists(dest):
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+    # Directories are the same
+    except shutil.Error as e:
+        print('Directory not copied. Error: %s' % e)
+    # Any error saying that the directory doesn't exist
+    except OSError as e:
+        print('Directory not copied. Error: %s' % e)
+
 def rename_img():
-    # change directory to data
-    assert os.path.exists('data_uncleaned'), "Raw data not found"
-    os.chdir('data_uncleaned')
+    data_uncleaned = 'data_uncleaned'
+    resize = 'resize'
+    assert os.path.exists(data_uncleaned), "Raw data not found"
+
+    copyDirectory(data_uncleaned, resize)
+    os.chdir(resize)
     # rename all the images to indices
     i = 1
     for image in os.listdir(os.getcwd()):
@@ -17,6 +33,9 @@ def rename_img():
 def flip_img():
     # change directory to data
     os.chdir('../data/Real')
+    # clean out the resize folder
+    if os.path.exists('../../resize'):
+        shutil.rmtree('../../resize')
     # find the last data index in current directory
     i = len(os.listdir(os.getcwd())) + 1
     # flipping original data
@@ -28,7 +47,6 @@ def flip_img():
             i += 1
 
 def resize_img(new_dimension):
-    # os.chdir('data_uncleaned')
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             img = cv.imread(image)
@@ -105,10 +123,12 @@ def crop_img(new_dimension):
                         break
 
 
-def zero_out(img):
-
-    ret, thresh = cv.threshold(img, 127, 255, cv.THRESH_BINARY_INV)
-
+def zero_out(img, edge_only):
+    if not edge_only:
+        ret, thresh = cv.threshold(img, 127, 255, cv.THRESH_BINARY_INV)
+    else:
+        # ret, thresh = cv.threshold(img, 255, 255, cv.THRESH_BINARY_INV)
+        thresh = img
     # ret, thresh1 = cv.threshold(img, 127, 255, cv.THRESH_BINARY)
     # img = cv.normalize(img, None, 255, 0, cv.NORM_MINMAX, cv.CV_8UC1)
     # Otsu's thresholding
@@ -141,8 +161,8 @@ def rgb_to_gray(imageSource):
     #cv.imwrite("gray.jpg", img)
     return img
 
-def mor_closing():
-    generator_input_dir = '../../generator_input/edges'
+def mor_closing(edge_only=False):
+    generator_input_dir = '../../input_edges/edges'
     if os.path.exists(generator_input_dir):
         shutil.rmtree(generator_input_dir)
     os.makedirs(generator_input_dir)
@@ -151,10 +171,11 @@ def mor_closing():
     for image in os.listdir(os.getcwd()):
         if image.endswith(".jpg"):
             img = rgb_to_gray(image)
-            kernel = np.ones((7, 7), np.uint8)
-            closing = cv.morphologyEx(img, cv.MORPH_CLOSE, kernel)
-            img = detect_edges(closing)
-            img = zero_out(img)
+            if not edge_only:
+                kernel = np.ones((7, 7), np.uint8)
+                img = cv.morphologyEx(img, cv.MORPH_CLOSE, kernel)
+            img = detect_edges(img)
+            img = zero_out(img, edge_only)
             img = img.astype('uint8')
             img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
             cv.imwrite(generator_input_dir + "/" + image, img)
@@ -164,6 +185,5 @@ if __name__ == '__main__':
     resize_img(256)
     crop_img(256)
     flip_img()
-    mor_closing()
-    pass
+    mor_closing(False)
 
