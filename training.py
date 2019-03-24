@@ -12,8 +12,6 @@ from model import DCGAN
 import cv2 as cv
 import shutil
 
-manualSeed = 999
-
 # =================================== Load Data ======================================
 def get_data_loader(num_channel, batch_size):
     # We transform them to Tensors of normalized range [-1, 1].
@@ -28,13 +26,16 @@ def get_data_loader(num_channel, batch_size):
         test_dir = './test'
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    # real images
-    real_set = torchvision.datasets.ImageFolder(root=real_dir, transform=transform)
-    real_loader = torch.utils.data.DataLoader(real_set, batch_size=batch_size, drop_last=True, num_workers=1)
+    real_set = torchvision.datasets.ImageFolder(root=real_dir, transform=transform) # real images
+    edge_set = torchvision.datasets.ImageFolder(root=input_dir, transform=transform) # input images for generator
 
-    # input images for generator
-    edge_set = torchvision.datasets.ImageFolder(root=input_dir, transform=transform)
-    edge_loader = torch.utils.data.DataLoader(edge_set, batch_size=batch_size, drop_last=True, num_workers=1)
+    np.random.seed(1000)  # Fixed numpy random seed for reproducible shuffling
+    train_indices = np.arange(len(real_set))
+    np.random.shuffle(train_indices)
+    train_sampler = torch.utils.data.SubsetRandomSampler(train_indices)
+
+    real_loader = torch.utils.data.DataLoader(real_set, batch_size=batch_size, sampler=train_sampler, num_workers=1, drop_last=True)
+    edge_loader = torch.utils.data.DataLoader(edge_set, batch_size=batch_size, sampler=train_sampler, num_workers=1, drop_last=True)
 
     # test image
     test_edge = torchvision.datasets.ImageFolder(root=test_dir, transform=transform)
@@ -174,9 +175,9 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
 if __name__ == '__main__':
     filter_size = 64
     num_channel = 1
-    num_epoch = 10
-    batch_size = 32
-    learning_rate = 1e-4
+    num_epoch = 15
+    batch_size = 64
+    learning_rate = 1e-3
     L1_lambda = 1
     checkpoint = False
     gan = DCGAN(filter_size, num_channel)
