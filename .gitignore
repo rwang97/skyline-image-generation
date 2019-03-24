@@ -8,3 +8,4 @@ checkpoints/*
 test/*
 input_edges/*
 mor_edges/*
+denoise/*

@@ -9,6 +9,7 @@ INPUT_EDGE_DIR = BASE_DIR + '/input_edges/edges/'
 MOR_EDGE_DIR = BASE_DIR + '/mor_edges/edges/'
 RESIZE_DIR = BASE_DIR + '/resize/'
 DATA_UNCLEANED_DIR = BASE_DIR + '/data_uncleaned/'
+DENOISED_DIR = BASE_DIR + '/denoise/'
 
 # https://www.pythoncentral.io/how-to-recursively-copy-a-directory-folder-in-python/
 def copyDirectory(src, dest):
@@ -182,6 +183,20 @@ def mor_closing(path, no_morph, Gray):
                 img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
             cv.imwrite(path + "/" + image, img)
 
+def denoise(path, denoised_path):
+    if os.path.exists(denoised_path):
+        shutil.rmtree(denoised_path)
+    os.makedirs(denoised_path)
+
+    os.chdir(path)
+
+    print("denosing images: ", path)
+    for image in os.listdir(os.getcwd()):
+        if image.endswith(".jpg"):
+            img = cv.imread(image)
+            img = np.where(img > 200, 255, img)
+            cv.imwrite(denoised_path + "/" + image, img)
+
 if __name__ == '__main__':
     assert os.path.exists(DATA_UNCLEANED_DIR), "Raw data not found"
     option_1 = False
@@ -200,9 +215,10 @@ if __name__ == '__main__':
         mor_closing(path=INPUT_EDGE_DIR, no_morph=True, Gray=True) # detect edges without morphology, output to input edge directory
 
         resize_img(new_dimension=256, path=REAL_DIR, option_1=option_1, Gray=False) # go to specific directories for resizing
-        mor_closing(path=MOR_EDGE_DIR, no_morph=False, Gray=True)  # detect edges with morphology, output to input edge directory
-        resize_img(new_dimension=256, path=MOR_EDGE_DIR, option_1=option_1, Gray=True)
-        resize_img(new_dimension=256, path=INPUT_EDGE_DIR, option_1=option_1, Gray=True)
+        # mor_closing(path=MOR_EDGE_DIR, no_morph=False, Gray=True)  # detect edges with morphology, output to input edge directory
+        # resize_img(new_dimension=256, path=MOR_EDGE_DIR, option_1=option_1, Gray=True)
+        resize_img(new_dimension=256, path=INPUT_EDGE_DIR, option_1=option_1, Gray=False)
+        denoise(path=INPUT_EDGE_DIR, denoised_path=DENOISED_DIR)
 
     # clean out the resize folder
     if os.path.exists(RESIZE_DIR):

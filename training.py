@@ -21,8 +21,8 @@ def get_data_loader(num_channel, batch_size):
         test_dir = './test'
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     else:
-        real_dir = './data/Real'
-        input_dir = './input_edges'
+        real_dir = './data'
+        input_dir = './denoise'
         test_dir = './test'
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
@@ -174,11 +174,11 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 1
+    num_channel = 3
     num_epoch = 15
-    batch_size = 64
+    batch_size = 128
     learning_rate = 1e-3
-    L1_lambda = 1
+    L1_lambda = 10
     checkpoint = False
     gan = DCGAN(filter_size, num_channel)
     gan.netG.apply(weights_init)
