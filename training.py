@@ -12,36 +12,43 @@ from model import DCGAN
 import cv2 as cv
 import shutil
 
+# ============================ Class for two dataset ================================
+# https://discuss.pytorch.org/t/train-simultaneously-on-two-datasets/649/2
+class ConcatDataset(torch.utils.data.Dataset):
+    def __init__(self, *datasets):
+        self.datasets = datasets
+
+    def __getitem__(self, i):
+        return tuple(d[i] for d in self.datasets)
+
+    def __len__(self):
+        return min(len(d) for d in self.datasets)
+
 # =================================== Load Data ======================================
 def get_data_loader(num_channel, batch_size):
     # We transform them to Tensors of normalized range [-1, 1].
     if num_channel == 1:
-        real_dir = './input_edges'
+        real_dir = './denoise'
         input_dir = './mor_edges'
         test_dir = './test'
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     else:
-        real_dir = './data'
+        real_dir = './data/Real'
         input_dir = './denoise'
         test_dir = './test'
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
+    input_set = torchvision.datasets.ImageFolder(root=input_dir, transform=transform)  # input images for generator
     real_set = torchvision.datasets.ImageFolder(root=real_dir, transform=transform) # real images
-    edge_set = torchvision.datasets.ImageFolder(root=input_dir, transform=transform) # input images for generator
 
     np.random.seed(1000)  # Fixed numpy random seed for reproducible shuffling
-    train_indices = np.arange(len(real_set))
-    np.random.shuffle(train_indices)
-    train_sampler = torch.utils.data.SubsetRandomSampler(train_indices)
-
-    real_loader = torch.utils.data.DataLoader(real_set, batch_size=batch_size, sampler=train_sampler, num_workers=1, drop_last=True)
-    edge_loader = torch.utils.data.DataLoader(edge_set, batch_size=batch_size, sampler=train_sampler, num_workers=1, drop_last=True)
+    train_loader = torch.utils.data.DataLoader(ConcatDataset(input_set, real_set), batch_size=batch_size, shuffle=True, num_workers=1)
 
     # test image
     test_edge = torchvision.datasets.ImageFolder(root=test_dir, transform=transform)
     test_loader = torch.utils.data.DataLoader(test_edge, batch_size=1, num_workers=1)
 
-    return real_loader, edge_loader, test_loader
+    return train_loader, test_loader
 
 # ============================= Weight Initialization ======================================
 # Weight initialization
@@ -94,7 +101,7 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
     os.makedirs('./data/Fake')
     
     # load training data
-    real_loader, edge_loader, test_loader = get_data_loader(num_channel, batch_size)
+    train_loader, test_loader = get_data_loader(num_channel, batch_size)
 
     # loss function and optimizer
     BCE_Loss = nn.BCELoss()
@@ -107,30 +114,28 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
 
     print("Starting Training Loop...")
     for epoch in range(num_epochs):
-        edge_iter = iter(edge_loader)
 
         # output result to disk
         test_output(model, test_loader, num_channel, epoch)
 
-        for i, real_data in enumerate(real_loader, 0):
+        for i, (input, real) in enumerate(train_loader, 0):
             ############################
             # (1) Update D network
             ############################
             model.netD.zero_grad()
             # Train with all-fake batch
             # Generate fake image batch with G
-            edge_batch = next(edge_iter)
-            fake = model.netG(edge_batch[0])
+            fake = model.netG(input[0])
 
             # Forward pass real batch through D
-            output = model.netD(edge_batch[0], real_data[0])
+            output = model.netD(input[0], real[0])
             label = torch.full(output.shape, real_label)
             # Calculate loss on all-real batch
             loss_D_real = BCE_Loss(output, label)
             D_real = output.mean().item()
 
             # Classify all fake batch with D
-            output = model.netD(edge_batch[0], fake.detach())
+            output = model.netD(input[0], fake.detach())
             label = torch.full(output.shape, fake_label)
             # Calculate D's loss on the all-fake batch
             loss_D_fake = BCE_Loss(output, label)
@@ -147,10 +152,10 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
             model.netG.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = model.netD(edge_batch[0], fake)
+            output = model.netD(input[0], fake)
             # Calculate G's loss based on this output
             loss_G_BCE = BCE_Loss(output, label)
-            loss_G_L1 = L1_Loss(fake, real_data[0]) * L1_lambda
+            loss_G_L1 = L1_Loss(fake, real[0]) * L1_lambda
             loss_G = loss_G_BCE + loss_G_L1
             # Calculate gradients for G
             loss_G.backward()
@@ -174,9 +179,9 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 3
+    num_channel = 1
     num_epoch = 15
-    batch_size = 128
+    batch_size = 64
     learning_rate = 1e-3
     L1_lambda = 10
     checkpoint = False
