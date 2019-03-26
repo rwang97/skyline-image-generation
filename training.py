@@ -33,7 +33,7 @@ def get_data_loader(num_channel, batch_size):
         test_dir = './test'
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     else:
-        real_dir = './data/Real'
+        real_dir = './data'
         input_dir = './denoise'
         test_dir = './test'
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -62,11 +62,11 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 def test_output(model, test_loader, num_channel, epoch):
-    test_fake = model.netG(next(iter(test_loader))[0])
+    test_fake = model.netG(next(iter(test_loader))[0].to(device))
     if num_channel == 1:
-        test_fake = test_fake.detach().numpy().squeeze()
+        test_fake = test_fake.detach().cpu().numpy().squeeze()
     else:
-        test_fake = np.transpose(test_fake.detach().numpy().squeeze(), [1, 2, 0])
+        test_fake = np.transpose(test_fake.detach().cpu().numpy().squeeze(), [1, 2, 0])
 
     test_fake = (test_fake / 2 + 0.5) * 255
     cv.imwrite("./data/Fake/" + str(epoch) + ".jpg", test_fake)
@@ -88,7 +88,7 @@ def get_model_name(name, batch_size, learning_rate, epoch):
 
 # =================================== Training ======================================
 # https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
-def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10, num_epochs=5, checkpoint=False):
+def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10, num_epochs=5, checkpoint=False):
 
     if checkpoint:
         if os.path.exists('./checkpoints'):
@@ -106,8 +106,8 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
     # loss function and optimizer
     BCE_Loss = nn.BCELoss()
     L1_Loss = nn.L1Loss()
-    optimizerD = optim.Adam(model.netD.parameters(), lr=learning_rate)
-    optimizerG = optim.Adam(model.netG.parameters(), lr=learning_rate)
+    optimizerD = optim.Adam(model.netD.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+    optimizerG = optim.Adam(model.netG.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
     real_label = 1
     fake_label = 0
@@ -125,18 +125,18 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
             model.netD.zero_grad()
             # Train with all-fake batch
             # Generate fake image batch with G
-            fake = model.netG(input[0])
+            fake = model.netG(input[0].to(device)).to(device)
 
             # Forward pass real batch through D
-            output = model.netD(input[0], real[0])
-            label = torch.full(output.shape, real_label)
+            output = model.netD(input[0].to(device), real[0].to(device))
+            label = torch.full(output.shape, real_label).to(device)
             # Calculate loss on all-real batch
             loss_D_real = BCE_Loss(output, label)
             D_real = output.mean().item()
 
             # Classify all fake batch with D
-            output = model.netD(input[0], fake.detach())
-            label = torch.full(output.shape, fake_label)
+            output = model.netD(input[0].to(device), fake.detach())
+            label = torch.full(output.shape, fake_label).to(device)
             # Calculate D's loss on the all-fake batch
             loss_D_fake = BCE_Loss(output, label)
             D_fake = output.mean().item()
@@ -152,10 +152,10 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
             model.netG.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = model.netD(input[0], fake)
+            output = model.netD(input[0].to(device), fake)
             # Calculate G's loss based on this output
             loss_G_BCE = BCE_Loss(output, label)
-            loss_G_L1 = L1_Loss(fake, real[0]) * L1_lambda
+            loss_G_L1 = L1_Loss(fake, real[0].to(device)) * L1_lambda
             loss_G = loss_G_BCE + loss_G_L1
             # Calculate gradients for G
             loss_G.backward()
@@ -167,7 +167,9 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
             print("d_real is: " + str(D_real) + ", d_fake is: " + str(D_fake))
             print("================================================================")
 
-        if checkpoint:
+            torch.cuda.empty_cache()
+
+        if checkpoint and epoch != 0 and epoch % 10 == 0:
             # Save the current model (checkpoint) to a file
             model_path = get_model_name(model.name, batch_size, learning_rate, epoch)
             torch.save(model.state_dict(), model_path)
@@ -179,14 +181,16 @@ def train(model, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10,
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 1
-    num_epoch = 15
+    num_channel = 3
+    num_epoch = 100
     batch_size = 64
-    learning_rate = 1e-3
+    learning_rate = 2e-4
     L1_lambda = 10
-    checkpoint = False
-    gan = DCGAN(filter_size, num_channel)
+    checkpoint = True
+    ngpu = 1
+    device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
+    gan = DCGAN(device, filter_size, num_channel, ngpu)
     gan.netG.apply(weights_init)
     gan.netD.apply(weights_init)
-    train(gan, num_channel, batch_size, learning_rate, L1_lambda, num_epoch, checkpoint)
+    train(gan, device, num_channel, batch_size, learning_rate, L1_lambda, num_epoch, checkpoint)
 

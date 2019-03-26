@@ -6,6 +6,7 @@ generator_input/*
 __pycache__/*
 checkpoints/*
 test/*
+resize/*
 input_edges/*
 mor_edges/*
 denoise/*

@@ -3,36 +3,45 @@ import torch
 import torch.nn as nn
 
 class DCGAN(nn.Module):
-    def __init__(self, filter_size=64, num_channel=3):
+    def __init__(self, device, filter_size=64, num_channel=3, ngpu=0):
         super(DCGAN, self).__init__()
         self.name = "DC-GAN"
-        self.netD = Discriminator(filter_size=filter_size, num_channel=num_channel)
-        self.netG = Generator(num_downsampling=8, filter_size=filter_size, num_channel=num_channel)
+        self.netD = Discriminator(filter_size=filter_size, num_channel=num_channel, ngpu=ngpu).to(device)
+        self.netG = Generator(num_downsampling=8, filter_size=filter_size, num_channel=num_channel, ngpu=ngpu).to(device)
+        if (device.type == 'cuda') and (ngpu > 1):
+            netG = nn.DataParallel(netG, list(range(ngpu)))
+            netD = nn.DataParallel(netD, list(range(ngpu)))
 
 class Discriminator(nn.Module):
-    def __init__(self, filter_size=64, num_channel=3):
+    def __init__(self, filter_size=64, num_channel=3, ngpu=0):
         super(Discriminator, self).__init__()
         self.name = "Discriminator"
         self.filter_size = filter_size
+        self.ngpu = ngpu
+        # 256 -> 128
         self.layer1 = nn.Sequential(
             nn.Conv2d(2*num_channel, self.filter_size, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True)
         )
+        # 128 -> 64
         self.layer2 = nn.Sequential(
             nn.Conv2d(self.filter_size, self.filter_size*2, kernel_size=4, stride=2, padding=1),
             nn.InstanceNorm2d(self.filter_size*2),
             nn.LeakyReLU(0.2, inplace=True)
         )
+        # 64 -> 32
         self.layer3 = nn.Sequential(
             nn.Conv2d(self.filter_size * 2, self.filter_size * 4, kernel_size=4, stride=2, padding=1),
             nn.InstanceNorm2d(self.filter_size * 4),
             nn.LeakyReLU(0.2, inplace=True)
         )
+        # 32 -> 31
         self.layer4 = nn.Sequential(
             nn.Conv2d(self.filter_size * 4, self.filter_size * 8, kernel_size=4, stride=1, padding=1),
             nn.InstanceNorm2d(self.filter_size * 8),
             nn.LeakyReLU(0.2, inplace=True)
         )
+        # 31 -> 30
         self.layer5 = nn.Sequential(
             nn.Conv2d(self.filter_size * 8, 1, kernel_size=4, stride=1, padding=1),
             nn.Sigmoid()
@@ -52,9 +61,10 @@ class Generator(nn.Module):
     """
     An eight hidden-layer generative neural network
     """
-    def __init__(self, num_downsampling=8, filter_size=64, num_channel=3):
+    def __init__(self, num_downsampling=8, filter_size=64, num_channel=3, ngpu=0):
         super(Generator, self).__init__()
         self.name = "Generator"
+        self.ngpu = ngpu
         self.model = Unet(num_downsampling=num_downsampling, filter_size=filter_size, num_channel=num_channel)
 
     def forward(self, x):

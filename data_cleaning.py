@@ -9,7 +9,7 @@ INPUT_EDGE_DIR = BASE_DIR + '/input_edges/edges/'
 MOR_EDGE_DIR = BASE_DIR + '/mor_edges/edges/'
 RESIZE_DIR = BASE_DIR + '/resize/'
 DATA_UNCLEANED_DIR = BASE_DIR + '/data_uncleaned/'
-DENOISED_DIR = BASE_DIR + '/denoise/'
+DENOISED_DIR = BASE_DIR + '/denoise/denoise/'
 
 # https://www.pythoncentral.io/how-to-recursively-copy-a-directory-folder-in-python/
 def copyDirectory(src, dest):
