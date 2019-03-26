@@ -61,8 +61,9 @@ def weights_init(m):
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
 
-def test_output(model, test_loader, num_channel, epoch):
-    test_fake = model.netG(next(iter(test_loader))[0].to(device))
+def test_output(model, test_loader, num_channel, epoch, checkpoint=False):
+    test_data = next(iter(test_loader))[0]
+    test_fake = model.netG(test_data.to(device) if cloud_computing else test_data)
     if num_channel == 1:
         test_fake = test_fake.detach().cpu().numpy().squeeze()
     else:
@@ -88,7 +89,7 @@ def get_model_name(name, batch_size, learning_rate, epoch):
 
 # =================================== Training ======================================
 # https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
-def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10, num_epochs=5, checkpoint=False):
+def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_lambda=10, num_epochs=5, checkpoint=False, cloud_computing=False):
 
     if checkpoint:
         if os.path.exists('./checkpoints'):
@@ -116,27 +117,33 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
     for epoch in range(num_epochs):
 
         # output result to disk
-        test_output(model, test_loader, num_channel, epoch)
+        test_output(model, test_loader, num_channel, epoch, checkpoint)
 
         for i, (input, real) in enumerate(train_loader, 0):
+            input_data = input[0].to(device) if cloud_computing else input[0]
+            real_data = real[0].to(device) if cloud_computing else real[0]
             ############################
             # (1) Update D network
             ############################
             model.netD.zero_grad()
             # Train with all-fake batch
             # Generate fake image batch with G
-            fake = model.netG(input[0].to(device)).to(device)
+            fake = model.netG(input_data).to(device) if cloud_computing else model.netG(input_data)
 
             # Forward pass real batch through D
-            output = model.netD(input[0].to(device), real[0].to(device))
-            label = torch.full(output.shape, real_label).to(device)
+            output = model.netD(input_data, real_data)
+            label = torch.full(output.shape, real_label)
+            if cloud_computing == True:
+                label = label.to(device)
             # Calculate loss on all-real batch
             loss_D_real = BCE_Loss(output, label)
             D_real = output.mean().item()
 
             # Classify all fake batch with D
-            output = model.netD(input[0].to(device), fake.detach())
-            label = torch.full(output.shape, fake_label).to(device)
+            output = model.netD(input_data, fake.detach())
+            label = torch.full(output.shape, fake_label)
+            if cloud_computing == True:
+                label = label.to(device)
             # Calculate D's loss on the all-fake batch
             loss_D_fake = BCE_Loss(output, label)
             D_fake = output.mean().item()
@@ -152,10 +159,10 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
             model.netG.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = model.netD(input[0].to(device), fake)
+            output = model.netD(input_data, fake)
             # Calculate G's loss based on this output
             loss_G_BCE = BCE_Loss(output, label)
-            loss_G_L1 = L1_Loss(fake, real[0].to(device)) * L1_lambda
+            loss_G_L1 = L1_Loss(fake, real_data) * L1_lambda
             loss_G = loss_G_BCE + loss_G_L1
             # Calculate gradients for G
             loss_G.backward()
@@ -188,9 +195,10 @@ if __name__ == '__main__':
     L1_lambda = 10
     checkpoint = True
     ngpu = 1
+    cloud_computing = False
     device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-    gan = DCGAN(device, filter_size, num_channel, ngpu)
+    gan = DCGAN(device, filter_size, num_channel, ngpu, cloud_computing)
     gan.netG.apply(weights_init)
     gan.netD.apply(weights_init)
-    train(gan, device, num_channel, batch_size, learning_rate, L1_lambda, num_epoch, checkpoint)
+    train(gan, device, num_channel, batch_size, learning_rate, L1_lambda, num_epoch, checkpoint, cloud_computing)
 

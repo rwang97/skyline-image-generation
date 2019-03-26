@@ -3,14 +3,17 @@ import torch
 import torch.nn as nn
 
 class DCGAN(nn.Module):
-    def __init__(self, device, filter_size=64, num_channel=3, ngpu=0):
+    def __init__(self, device, filter_size=64, num_channel=3, ngpu=0, cloud_computing=False):
         super(DCGAN, self).__init__()
         self.name = "DC-GAN"
-        self.netD = Discriminator(filter_size=filter_size, num_channel=num_channel, ngpu=ngpu).to(device)
-        self.netG = Generator(num_downsampling=8, filter_size=filter_size, num_channel=num_channel, ngpu=ngpu).to(device)
-        if (device.type == 'cuda') and (ngpu > 1):
-            netG = nn.DataParallel(netG, list(range(ngpu)))
-            netD = nn.DataParallel(netD, list(range(ngpu)))
+        self.netD = Discriminator(filter_size=filter_size, num_channel=num_channel, ngpu=ngpu)
+        self.netG = Generator(num_downsampling=8, filter_size=filter_size, num_channel=num_channel, ngpu=ngpu)
+        if cloud_computing == True:
+            self.netD = self.netD.to(device)
+            self.netG = self.netG.to(device)
+            if (device.type == 'cuda') and (ngpu > 1):
+                self.netG = nn.DataParallel(self.netG, list(range(ngpu)))
+                self.netD = nn.DataParallel(self.netD, list(range(ngpu)))
 
 class Discriminator(nn.Module):
     def __init__(self, filter_size=64, num_channel=3, ngpu=0):
