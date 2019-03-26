@@ -118,7 +118,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 
         # output result to disk
         test_output(model, test_loader, num_channel, epoch, checkpoint)
-
+        
         for i, (input, real) in enumerate(train_loader, 0):
             input_data = input[0].to(device) if cloud_computing else input[0]
             real_data = real[0].to(device) if cloud_computing else real[0]
@@ -176,7 +176,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 
             torch.cuda.empty_cache()
 
-        if checkpoint and epoch != 0 and epoch % 10 == 0:
+        if checkpoint and epoch % 10 == 9:
             # Save the current model (checkpoint) to a file
             model_path = get_model_name(model.name, batch_size, learning_rate, epoch)
             torch.save(model.state_dict(), model_path)
@@ -189,7 +189,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 if __name__ == '__main__':
     filter_size = 64
     num_channel = 3
-    num_epoch = 100
+    num_epoch = 200
     batch_size = 64
     learning_rate = 2e-4
     L1_lambda = 10
