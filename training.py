@@ -28,8 +28,8 @@ class ConcatDataset(torch.utils.data.Dataset):
 def get_data_loader(num_channel, batch_size):
     # We transform them to Tensors of normalized range [-1, 1].
     if num_channel == 1:
-        real_dir = './denoise'
-        input_dir = './mor_edges'
+        real_dir = './data'
+        input_dir = './denoise'
         test_dir = './test'
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     else:
@@ -115,7 +115,8 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 
     print("Starting Training Loop...")
     for epoch in range(num_epochs):
-
+        fake_avg = 0
+        real_avg = 0
         # output result to disk
         test_output(model, test_loader, num_channel, epoch, checkpoint)
         
@@ -138,6 +139,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
             # Calculate loss on all-real batch
             loss_D_real = BCE_Loss(output, label)
             D_real = output.mean().item()
+            real_avg += D_real
 
             # Classify all fake batch with D
             output = model.netD(input_data, fake.detach())
@@ -147,6 +149,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
             # Calculate D's loss on the all-fake batch
             loss_D_fake = BCE_Loss(output, label)
             D_fake = output.mean().item()
+            fake_avg += D_fake
 
             # Add the gradients from the all-real and all-fake batches
             loss_D = (loss_D_real + loss_D_fake) / 2
@@ -176,11 +179,63 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 
             torch.cuda.empty_cache()
 
+        # Calculate fake_avg and real_avg
+        fake_avg = fake_avg/(i+1)
+        real_avg = real_avg/(i+1)
+
+        if epoch % 5 == 4:
+            # Train D network separately until
+            print("======================== starting to train discriminator =======================")
+            while (real_avg < 0.5 and fake_avg > 0.4):
+                fake_avg = 0
+                real_avg = 0
+                for j, (input, real) in enumerate(train_loader, 0):
+                    input_data = input[0].to(device) if cloud_computing else input[0]
+                    real_data = real[0].to(device) if cloud_computing else real[0]
+                    model.netD.zero_grad()
+                    # Train with all-fake batch
+                    # Generate fake image batch with G
+                    fake = model.netG(input_data).to(device) if cloud_computing else model.netG(input_data)
+
+                    # Forward pass real batch through D
+                    output = model.netD(input_data, real_data)
+                    label = torch.full(output.shape, real_label)
+                    if cloud_computing == True:
+                        label = label.to(device)
+                    # Calculate loss on all-real batch
+                    loss_D_real = BCE_Loss(output, label)
+                    D_real = output.mean().item()
+                    real_avg += D_real
+
+                    # Classify all fake batch with D
+                    output = model.netD(input_data, fake.detach())
+                    label = torch.full(output.shape, fake_label)
+                    if cloud_computing == True:
+                        label = label.to(device)
+                    # Calculate D's loss on the all-fake batch
+                    loss_D_fake = BCE_Loss(output, label)
+                    D_fake = output.mean().item()
+                    fake_avg += D_fake
+
+                    # Add the gradients from the all-real and all-fake batches
+                    loss_D = (loss_D_real + loss_D_fake) / 2
+                    loss_D.backward()
+                    optimizerD.step()
+
+                    # Output training stats
+                    
+                    print("epoch: " + str(epoch) + ", iteration: " + str(j))
+                    print("d_loss is: " + str(float(loss_D)) + ", d_real is: " + str(D_real) + ", d_fake is: " + str(D_fake))
+                    print("================================================================")
+
+                    torch.cuda.empty_cache()
+                fake_avg = fake_avg / (j + 1)
+                real_avg = real_avg / (j + 1)
+
         if checkpoint and epoch % 10 == 9:
             # Save the current model (checkpoint) to a file
             model_path = get_model_name(model.name, batch_size, learning_rate, epoch)
             torch.save(model.state_dict(), model_path)
-
     # output final result to disk
     test_output(model, test_loader, num_channel, epoch)
 
@@ -188,14 +243,14 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 3
+    num_channel = 1
     num_epoch = 200
     batch_size = 64
     learning_rate = 2e-4
-    L1_lambda = 10
+    L1_lambda = 100
     checkpoint = True
     ngpu = 1
-    cloud_computing = False
+    cloud_computing = True
     device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
     gan = DCGAN(device, filter_size, num_channel, ngpu, cloud_computing)
     gan.netG.apply(weights_init)
