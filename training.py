@@ -28,7 +28,7 @@ class ConcatDataset(torch.utils.data.Dataset):
 def get_data_loader(num_channel, batch_size):
     # We transform them to Tensors of normalized range [-1, 1].
     if num_channel == 1:
-        real_dir = './denoise'
+        real_dir = './data'
         input_dir = './mor_edges'
         test_dir = './test'
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
@@ -61,16 +61,18 @@ def weights_init(m):
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
 
-def test_output(model, test_loader, num_channel, epoch, checkpoint=False):
-    test_data = next(iter(test_loader))[0]
-    test_fake = model.netG(test_data.to(device) if cloud_computing else test_data)
-    if num_channel == 1:
-        test_fake = test_fake.detach().cpu().numpy().squeeze()
-    else:
-        test_fake = np.transpose(test_fake.detach().cpu().numpy().squeeze(), [1, 2, 0])
+def test_output(model, test_loader, num_channel, epoch):
+    for i, image in enumerate(test_loader, 0):
+        test_data = image[0]
+        test_fake = model.netG(test_data.to(device) if cloud_computing else test_data)
+        if num_channel == 1:
+            test_fake = test_fake.detach().cpu().numpy().squeeze()
+        else:
+            test_fake = np.transpose(test_fake.detach().cpu().numpy().squeeze(), [1, 2, 0])
 
-    test_fake = (test_fake / 2 + 0.5) * 255
-    cv.imwrite("./data/Fake/" + str(epoch) + ".jpg", test_fake)
+        test_fake = (test_fake / 2 + 0.5) * 255
+        cv.imwrite("./data/Fake/" + str(i) + '/' + str(epoch) + ".jpg", test_fake)
+        torch.cuda.empty_cache()
 
 # =================================== Checkpoint ======================================
 def get_model_name(name, batch_size, learning_rate, epoch):
@@ -100,6 +102,11 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
     if os.path.exists('./data/Fake'):
         shutil.rmtree('./data/Fake')
     os.makedirs('./data/Fake')
+
+    for i, image in enumerate(os.listdir('./test/test')):
+        if os.path.exists('./data/Fake/' + str(i)):
+            shutil.rmtree('./data/Fake/' + str(i))
+        os.makedirs('./data/Fake/' + str(i))
     
     # load training data
     train_loader, test_loader = get_data_loader(num_channel, batch_size)
@@ -117,8 +124,9 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
     for epoch in range(num_epochs):
 
         # output result to disk
-        test_output(model, test_loader, num_channel, epoch, checkpoint)
-        
+        if epoch % 5 == 4:
+            test_output(model, test_loader, num_channel, epoch)
+
         for i, (input, real) in enumerate(train_loader, 0):
             input_data = input[0].to(device) if cloud_computing else input[0]
             real_data = real[0].to(device) if cloud_computing else real[0]
@@ -188,14 +196,14 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 3
+    num_channel = 1
     num_epoch = 200
     batch_size = 64
-    learning_rate = 2e-4
-    L1_lambda = 10
+    learning_rate = 1e-4
+    L1_lambda = 50
     checkpoint = True
     ngpu = 1
-    cloud_computing = False
+    cloud_computing = True
     device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
     gan = DCGAN(device, filter_size, num_channel, ngpu, cloud_computing)
     gan.netG.apply(weights_init)

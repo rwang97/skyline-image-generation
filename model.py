@@ -83,7 +83,7 @@ class Unet(nn.Module):
         unet_block = UnetBlock(filter_size * 8, filter_size * 8, None, innermost=True)
         # intermediate layers
         for i in range(num_downsampling - 5):
-            unet_block = UnetBlock(filter_size * 8, filter_size * 8, None, unet_block)
+            unet_block = UnetBlock(filter_size * 8, filter_size * 8, None, unet_block, dropout=True)
         # downsampling and upsampling layers
         unet_block = UnetBlock(filter_size * 8, filter_size * 4, None, unet_block)
         unet_block = UnetBlock(filter_size * 4, filter_size * 2, None, unet_block)
@@ -97,7 +97,7 @@ class Unet(nn.Module):
 # Unet Blocks that uses skip connection
 class UnetBlock(nn.Module):
     # in_channel and out_channel are naming from transposed convolution side
-    def __init__(self, in_channel, out_channel, input_channel=None, subnet=None, outermost=False, innermost=False):
+    def __init__(self, in_channel, out_channel, input_channel=None, subnet=None, outermost=False, innermost=False, dropout=False):
         super(UnetBlock, self).__init__()
         self.outermost = outermost
         if input_channel is None:
@@ -122,7 +122,11 @@ class UnetBlock(nn.Module):
             upconv = nn.ConvTranspose2d(in_channel * 2, out_channel, kernel_size=4, stride=2, padding=1)
             down = [downrelu, downconv, downnorm]
             up = [uprelu, upconv, upnorm]
-            model = down + [subnet] + up
+
+            if dropout:
+                model = down + [subnet] + up + [nn.Dropout(0.5)]
+            else:
+                model = down + [subnet] + up
 
         self.model = nn.Sequential(*model)
 
