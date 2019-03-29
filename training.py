@@ -34,7 +34,7 @@ def get_data_loader(num_channel, batch_size):
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     else:
         real_dir = './data'
-        input_dir = './denoise'
+        input_dir = './mor_edges'
         test_dir = './test'
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
@@ -70,8 +70,12 @@ def test_output(model, test_loader, num_channel, epoch):
         else:
             test_fake = np.transpose(test_fake.detach().cpu().numpy().squeeze(), [1, 2, 0])
 
-        test_fake = (test_fake / 2 + 0.5) * 255
-        cv.imwrite("./data/Fake/" + str(i) + '/' + str(epoch) + ".jpg", test_fake)
+        test_fake = (test_fake / 2 + 0.5)
+        plt.imsave("./data/Fake/" + str(i)  + '/' + str(epoch) + ".jpg", test_fake)
+
+        temp_test_data = np.transpose(test_data.detach().cpu().numpy().squeeze(), [1, 2, 0])
+        temp_test_data = (temp_test_data / 2 + 0.5)
+        plt.imsave('./data/Fake/' + str(i) + '/' + '0.jpg', temp_test_data)
         torch.cuda.empty_cache()
 
 # =================================== Checkpoint ======================================
@@ -104,9 +108,9 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
     os.makedirs('./data/Fake')
 
     for i, image in enumerate(os.listdir('./test/test')):
-        if os.path.exists('./data/Fake/' + str(i)):
-            shutil.rmtree('./data/Fake/' + str(i))
-        os.makedirs('./data/Fake/' + str(i))
+        if os.path.exists('./data/Fake/' + image[:-4]):
+            shutil.rmtree('./data/Fake/' + image[:-4])
+        os.makedirs('./data/Fake/' + image[:-4])
     
     # load training data
     train_loader, test_loader = get_data_loader(num_channel, batch_size)
@@ -124,7 +128,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
     for epoch in range(num_epochs):
 
         # output result to disk
-        if epoch % 5 == 4:
+        if epoch % 10 == 9:
             test_output(model, test_loader, num_channel, epoch)
 
         for i, (input, real) in enumerate(train_loader, 0):
@@ -184,7 +188,7 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 
             torch.cuda.empty_cache()
 
-        if checkpoint and epoch % 10 == 9:
+        if checkpoint and epoch % 20 == 19:
             # Save the current model (checkpoint) to a file
             model_path = get_model_name(model.name, batch_size, learning_rate, epoch)
             torch.save(model.state_dict(), model_path)
@@ -196,8 +200,8 @@ def train(model, device, num_channel=1, batch_size=32, learning_rate=1e-4, L1_la
 # =================================== Main ======================================
 if __name__ == '__main__':
     filter_size = 64
-    num_channel = 1
-    num_epoch = 200
+    num_channel = 3
+    num_epoch = 1000
     batch_size = 64
     learning_rate = 1e-4
     L1_lambda = 50
