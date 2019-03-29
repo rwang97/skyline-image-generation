@@ -2,10 +2,19 @@
 import torch
 import torch.nn as nn
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
 class DCGAN(nn.Module):
-    def __init__(self, device, filter_size=64, num_channel=3, ngpu=0, cloud_computing=False):
+    def __init__(self, device, filter_size=64, num_channel=3, color='R', ngpu=0, cloud_computing=False):
         super(DCGAN, self).__init__()
         self.name = "DC-GAN"
+        self.color = color
         self.netD = Discriminator(filter_size=filter_size, num_channel=num_channel, ngpu=ngpu)
         self.netG = Generator(num_downsampling=8, filter_size=filter_size, num_channel=num_channel, ngpu=ngpu)
         if cloud_computing == True:
@@ -14,6 +23,8 @@ class DCGAN(nn.Module):
             if (device.type == 'cuda') and (ngpu > 1):
                 self.netG = nn.DataParallel(self.netG, list(range(ngpu)))
                 self.netD = nn.DataParallel(self.netD, list(range(ngpu)))
+        self.netG.apply(weights_init)
+        self.netD.apply(weights_init)
 
 class Discriminator(nn.Module):
     def __init__(self, filter_size=64, num_channel=3, ngpu=0):
