@@ -6,7 +6,7 @@ This is a course project (APS360) from University of Toronto. Our main purpose i
 
 ## Usage
 #### Train on your own
-You can collect your own skyline images and obtain building boundaries from [gPb](https://github.com/vrabaud/gPb). Then you are able to train your own model with [train.py](training.py). Feel free to change the model architecture in [model.py](model.py), and change any hyperparameters we set in [train.py].
+You can collect your own skyline images and obtain building boundaries from [gPb](https://github.com/vrabaud/gPb). Then you are able to train your own model with [train.py](train.py). Feel free to change the model architecture in [model.py](model.py), and change any hyperparameters we set in train.py.
 
 #### Use Pre-trained Model
 Our team also provides our pre-trained model so that people can generate images directly without training. Our model isn't the best, but it should give you some fine results.
