@@ -1,4 +1,4 @@
-# skyline-image-generation
+# Skyline Image Generation
 This is a course project (APS360) from University of Toronto. Our main purpose is to generate city skyline images from input sketch. If interested, you can take a look at our project report for more details.
 
 ![Alt text](example/test.jpg?raw=true "Title")
