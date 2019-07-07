@@ -26,57 +26,71 @@ def get_model_name(name, batch_size, learning_rate, epoch):
     return path
 
 # ================================ Load Model ===================================
-def load_model(num_epoch=499):
+def load_model(num_channel=3, num_epoch=899):
+    # example parameters we used to train our model
     cloud_computing = True
     filter_size = 64
-    num_channel = 3
     ngpu = 1
+    batch_size = 64
+    learning_rate = 1e-4
     device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
     gan = DCGAN(device, filter_size, num_channel, ngpu, cloud_computing)
 
-    batch_size = 64
-    learning_rate = 1e-4
     model_path = get_model_name(gan.name, batch_size, learning_rate, num_epoch)
     state = torch.load(model_path, map_location=lambda storage, loc: storage)
     gan.load_state_dict(state)
     return gan
 
 # ============================== Generate Image =================================
-def generate_image(model, num_channel):
+def generate_image(model=None, num_channel=3):
 
-    # load test image
-    test_dir = 'test_img'
+    if os.path.exists('output'):
+        shutil.rmtree('output')
 
-    if num_channel == 1:
-        transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    else:
-        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    os.makedirs('output')
+
+    if os.path.exists('comparison'):
+        shutil.rmtree('comparison')
+
+    os.makedirs('comparison')
+
+    # load test image under "test" folder
+    test_dir = 'test'
+    assert(num_channel==3)
+
+    # if num_channel == 1:
+    #     transform = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    # else:
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     # test image
     test_edge = torchvision.datasets.ImageFolder(root=test_dir, transform=transform)
     test_loader = torch.utils.data.DataLoader(test_edge, batch_size=1, num_workers=1)
 
-    test_data = next(iter(test_loader))[0]
-    output_img = model.netG(test_data)
-
-    if num_channel == 1:
-        output_img = output_img.detach().cpu().numpy().squeeze()
-    else:
+    # traversing the test folder to generate a new image for each sketch 
+    for i, image in enumerate(test_loader, 0):
+        test_data = image[0]
+        output_img = model.netG(test_data)
+        # if num_channel == 1:
+        #     output_img = output_img.detach().cpu().numpy().squeeze()
+        # else:
         output_img = np.transpose(output_img.detach().numpy().squeeze(), [1, 2, 0])
 
-    output_img = (output_img / 2 + 0.5)
-    plt.imsave("./output_image.jpg", output_img)
-    input_img = cv.imread('./test_img/test_img/test_image.jpg') / 255
-    comparison = np.hstack((input_img, output_img))
+        output_img = (output_img / 2 + 0.5)
+        plt.imsave("./output/" + str(i) + ".jpg", output_img)
 
-    # cv.imwrite("./output_image.jpg", output_img)
-    plt.imsave("./comparison.jpg", comparison)
-    plt.imshow(comparison)
+        temp_test_data = np.transpose(test_data.detach().cpu().numpy().squeeze(), [1, 2, 0])
+        temp_test_data = (temp_test_data / 2 + 0.5)
+        comparison = np.hstack((temp_test_data, output_img))
 
-    plt.show()
+        plt.imsave("./comparison/" + str(i) + ".jpg", comparison)
+
 
 # =================================== Main ======================================
 if __name__ == '__main__':
-    model = load_model(359)
-    generate_image(model, num_channel=3)
+    # we only support rgb
+    num_channel = 3
+    model = load_model(num_channel, 899)
+    generate_image(model, num_channel)
+    print("Done generating images, please check 'output' and 'comparison' directory")
 
