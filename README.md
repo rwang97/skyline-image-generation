@@ -4,6 +4,10 @@ This is a course project (APS360) from University of Toronto. Our main purpose i
 ![Alt text](example/test.jpg?raw=true "Title")
 ![Alt text](example/output.jpg?raw=true "Title")
 
+## Data
+#### Source
+We collected images from Flickr, an image hosting service. In case you want to view our dataset, the download link is [Google Drive](will be provided soon). This 'data_uncleaned.zip' should contain our uncleaed images downloaded directly from Flickr. We also provide our cleaned dataset here [Google Drive](https://drive.google.com/file/d/1Z4OJtYJWkbydLAIpiJ8ysvSar_3lp-5F/view?usp=sharing). 'input_edges' contains input sketches generated from [gPb](https://github.com/vrabaud/gPb) and 'real' has the corresponding real skyline images.
+
 ## Usage
 #### Train on your own
 You can collect your own skyline images and obtain building boundaries from [gPb](https://github.com/vrabaud/gPb). Then you are able to train your own model with [train.py](train.py). Feel free to change the model architecture in [model.py](model.py), and change any hyperparameters we set in train.py.
