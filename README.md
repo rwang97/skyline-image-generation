@@ -1,5 +1,5 @@
 # Skyline Image Generation
-This project is a PyTorch implementation of [Image-to-Image Translation with Conditional Adversarial Networks](https://arxiv.org/pdf/1611.07004.pdf) by Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A. Efros. Please refer to the paper for more details
+This project is a PyTorch implementation of [Image-to-Image Translation with Conditional Adversarial Networks](https://arxiv.org/pdf/1611.07004.pdf) by Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A. Efros.
 
 #### Model Architecture
 ##### Generator
