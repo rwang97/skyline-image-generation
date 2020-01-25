@@ -7,10 +7,10 @@ This project is a PyTorch implementation of [Image-to-Image Translation with Con
 ##### Discriminator
 ![Alt text](example/discriminator.png?raw=true "Title")
 
-#### Goal & Motivation
+## Goal & Motivation
 This is a course project (APS360) from University of Toronto. Our main purpose is to generate city skyline images from input sketch. If interested, you can take a look at our project report for more details. 
 
-#### Preliminary Result
+#### Sample Result
 ![Alt text](example/output_combined.png?raw=true "Title")
 
 ## Data
@@ -30,12 +30,16 @@ The following is the instruction on how to generate a skyline image from [test.j
 #### Setting Up Environment
 We use Anaconda with python version 3.6.7. Pytorch is the main framework we are using. Please install pytorch before running the demo code
 #### Step-By-Step instructions 
-1. Download our pre-trained model from [Google Drive](https://drive.google.com/file/d/15jCidE6pM2cnIuAL4wJbd_NR12YhTXKi/view?usp=sharing). 
-2. Put this model file into ["demo"](demo) directory.
-3. Open Terminal or Command Line, and go into the ["demo"](demo) directory -> cd demo
-4. Run the [demo.py](demo/demo.py) program -> python demo.py
-5. The output should be "Done generating images, please check 'output' and 'comparison' directory".
-6. Done! A generated image is stored under the 'output' directory. This is the output from [test.jpg](demo/test/test/test.jpg).
+1. Download our pre-trained model from [Google Drive](https://drive.google.com/file/d/15jCidE6pM2cnIuAL4wJbd_NR12YhTXKi/view?usp=sharing), and put this model file into ["demo"](demo) directory.
+2. Go to the ["demo"](demo) directory and run [demo.py](demo/demo.py).
+```
+cd demo
+python demo.py
+```
+3. The output message should be "Done generating images, please check 'output' and 'comparison' directory".
+4.  All Done! A generated image is stored under the 'output' directory. This is the output from [test.jpg](demo/test/test/test.jpg).
 
 ## Acknowledgments
-Our model is inspired by [pix2pix](https://arxiv.org/abs/1611.07004). The pytorch version of the code is [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix).
+Our model is inspired by [pix2pix](https://arxiv.org/abs/1611.07004). The pytorch version of the code is [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). Also I need to say thanks to my teammates, [Tom](https://github.com/luoshuya) and [Jeremy](https://github.com/jeremyxu1998). It has been a great pleasure working with you!
+
+
