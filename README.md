@@ -36,7 +36,10 @@ We use Anaconda with python version 3.6.7. Pytorch is the main framework we are 
 cd demo
 python demo.py
 ```
-3. The output message should be "Done generating images, please check 'output' and 'comparison' directory".
+3. The output message should be 
+```
+Done generating images, please check 'output' and 'comparison' directory.
+```
 4.  All Done! A generated image is stored under the 'output' directory. This is the output from [test.jpg](demo/test/test/test.jpg).
 
 ## Acknowledgments
