@@ -1,8 +1,17 @@
 # Skyline Image Generation
-This is a course project (APS360) from University of Toronto. Our main purpose is to generate city skyline images from input sketch. If interested, you can take a look at our project report for more details.
+This project is a PyTorch implementation of [Image-to-Image Translation with Conditional Adversarial Networks](https://arxiv.org/pdf/1611.07004.pdf) by Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A. Efros. Please refer to the paper for more details
 
-![Alt text](example/test.jpg?raw=true "Title")
-![Alt text](example/output.jpg?raw=true "Title")
+#### Model Architecture
+##### Generator
+![Alt text](example/generator.png?raw=true "Title")
+##### Discriminator
+![Alt text](example/discriminator.png?raw=true "Title")
+
+#### Goal & Motivation
+This is a course project (APS360) from University of Toronto. Our main purpose is to generate city skyline images from input sketch. If interested, you can take a look at our project report for more details. 
+
+#### Preliminary Result
+![Alt text](example/output_combined.png?raw=true "Title")
 
 ## Data
 #### Source
